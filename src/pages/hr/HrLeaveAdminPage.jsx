@@ -16,7 +16,7 @@ function HrLeaveAdminPage() {
   const loadLeaves = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/api/v1/admin/leaves')
+      const res = await apiClient.get('/v1/admin/leaves')
       setLeaves(res.data || [])
     } finally {
       setLoading(false)
@@ -31,7 +31,7 @@ function HrLeaveAdminPage() {
     e.preventDefault()
     setCreating(true)
     try {
-      await apiClient.post('/api/v1/admin/leaves', newLeave)
+      await apiClient.post('/v1/admin/leaves', newLeave)
       setNewLeave({
         employeeId: '',
         leaveType: '',
@@ -48,8 +48,8 @@ function HrLeaveAdminPage() {
   const updateStatus = async (id, action) => {
     const path =
       action === 'approve'
-        ? `/api/v1/admin/leaves/${id}/approve`
-        : `/api/v1/admin/leaves/${id}/reject`
+        ? `/v1/admin/leaves/${id}/approve`
+        : `/v1/admin/leaves/${id}/reject`
     await apiClient.patch(path)
     await loadLeaves()
   }

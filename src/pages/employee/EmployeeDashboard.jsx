@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/apiClient'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/auth-context'
 
 function EmployeeDashboard() {
   const { employeeId } = useAuth()
@@ -10,7 +10,7 @@ function EmployeeDashboard() {
   useEffect(() => {
     const load = async () => {
       const todayStr = new Date().toISOString().slice(0, 10)
-      const resAttendance = await apiClient.get('/api/v1/attendance/me', {
+      const resAttendance = await apiClient.get('/v1/attendance/me', {
         params: { from: todayStr, to: todayStr },
       })
       setToday(resAttendance.data?.[0] || null)

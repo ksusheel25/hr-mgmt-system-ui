@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiClient } from '../../lib/apiClient'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/auth-context'
 
 function EmployeeAttendancePage() {
   const { employeeId } = useAuth()
@@ -15,7 +15,7 @@ function EmployeeAttendancePage() {
   const load = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/api/v1/attendance/me', {
+      const res = await apiClient.get('/v1/attendance/me', {
         params: { from: range.from, to: range.to },
       })
       setRows(res.data || [])
@@ -34,7 +34,7 @@ function EmployeeAttendancePage() {
     setPunching(true)
     try {
       const path =
-        type === 'in' ? '/api/v1/attendance/check-in' : '/api/v1/attendance/check-out'
+        type === 'in' ? '/v1/attendance/check-in' : '/v1/attendance/check-out'
       await apiClient.post(path, { employeeId })
       await load()
     } finally {

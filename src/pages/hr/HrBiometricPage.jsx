@@ -27,7 +27,7 @@ function HrBiometricPage() {
 
       <div className="card-grid">
         <div className="card">
-          <h3 className="card-title">Test /api/v1/biometric/events</h3>
+          <h3 className="card-title">Test /v1/biometric/events</h3>
           <textarea
             rows={8}
             value={eventPayload}
@@ -38,7 +38,7 @@ function HrBiometricPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => send('/api/v1/biometric/events', eventPayload)}
+              onClick={() => send('/v1/biometric/events', eventPayload)}
             >
               Send event
             </button>
@@ -46,7 +46,7 @@ function HrBiometricPage() {
         </div>
 
         <div className="card">
-          <h3 className="card-title">Test /api/v1/biometric/punch</h3>
+          <h3 className="card-title">Test /v1/biometric/punch</h3>
           <textarea
             rows={8}
             value={punchPayload}
@@ -57,7 +57,7 @@ function HrBiometricPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => send('/api/v1/biometric/punch', punchPayload)}
+              onClick={() => send('/v1/biometric/punch', punchPayload)}
             >
               Send punch
             </button>

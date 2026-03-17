@@ -12,9 +12,9 @@ function HrEmployeesPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await apiClient.get('/api/v1/admin/employees')
+      const res = await apiClient.get('/v1/admin/employees')
       setEmployees(res.data || [])
-    } catch (err) {
+    } catch {
       setError('Failed to load employees.')
     } finally {
       setLoading(false)
@@ -38,13 +38,13 @@ function HrEmployeesPage() {
     setSaving(true)
     try {
       if (editEmployee.id) {
-        await apiClient.put(`/api/v1/admin/employees/${editEmployee.id}`, editEmployee)
+        await apiClient.put(`/v1/admin/employees/${editEmployee.id}`, editEmployee)
       } else {
-        await apiClient.post('/api/v1/admin/employees', editEmployee)
+        await apiClient.post('/v1/admin/employees', editEmployee)
       }
       setEditEmployee(null)
       await loadEmployees()
-    } catch (err) {
+    } catch {
       setError('Failed to save employee.')
     } finally {
       setSaving(false)
@@ -53,7 +53,7 @@ function HrEmployeesPage() {
 
   const handleDeactivate = async (employeeId) => {
     try {
-      await apiClient.patch(`/api/v1/admin/employees/${employeeId}/deactivate`)
+      await apiClient.patch(`/v1/admin/employees/${employeeId}/deactivate`)
       await loadEmployees()
     } catch {
       // minimal handling

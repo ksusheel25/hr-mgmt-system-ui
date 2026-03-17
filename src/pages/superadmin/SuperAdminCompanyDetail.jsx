@@ -12,9 +12,9 @@ function SuperAdminCompanyDetail() {
     const load = async () => {
       setError(null)
       try {
-        const res = await apiClient.get(`/api/v1/admin/companies/${companyId}`)
+        const res = await apiClient.get(`/v1/admin/companies/${companyId}`)
         setCompany(res.data)
-      } catch (err) {
+      } catch {
         setError('Failed to load company.')
       }
     }
@@ -29,8 +29,8 @@ function SuperAdminCompanyDetail() {
     e.preventDefault()
     setSaving(true)
     try {
-      await apiClient.put(`/api/v1/admin/companies/${companyId}`, company)
-    } catch (err) {
+      await apiClient.put(`/v1/admin/companies/${companyId}`, company)
+    } catch {
       setError('Failed to save changes.')
     } finally {
       setSaving(false)

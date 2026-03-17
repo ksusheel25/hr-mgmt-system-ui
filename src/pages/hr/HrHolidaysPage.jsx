@@ -10,7 +10,7 @@ function HrHolidaysPage() {
   const loadHolidays = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/api/v1/admin/holidays', {
+      const res = await apiClient.get('/v1/admin/holidays', {
         params: { from: range.from, to: range.to },
       })
       setHolidays(res.data || [])
@@ -28,16 +28,16 @@ function HrHolidaysPage() {
     e.preventDefault()
     if (editHoliday.id || editHoliday.holidayId) {
       const id = editHoliday.id || editHoliday.holidayId
-      await apiClient.put(`/api/v1/admin/holidays/${id}`, editHoliday)
+      await apiClient.put(`/v1/admin/holidays/${id}`, editHoliday)
     } else {
-      await apiClient.post('/api/v1/admin/holidays', editHoliday)
+      await apiClient.post('/v1/admin/holidays', editHoliday)
     }
     setEditHoliday(null)
     await loadHolidays()
   }
 
   const handleDelete = async (id) => {
-    await apiClient.delete(`/api/v1/admin/holidays/${id}`)
+    await apiClient.delete(`/v1/admin/holidays/${id}`)
     await loadHolidays()
   }
 

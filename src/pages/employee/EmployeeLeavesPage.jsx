@@ -44,7 +44,7 @@ function EmployeeLeavesPage() {
   }
 
   const cancelLeave = async (id) => {
-    await apiClient.patch(`/api/v1/admin/leaves/${id}/cancel`)
+    await apiClient.patch(`/v1/admin/leaves/${id}/cancel`)
     await load()
   }
 

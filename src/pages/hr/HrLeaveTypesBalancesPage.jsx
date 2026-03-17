@@ -10,7 +10,7 @@ function HrLeaveTypesBalancesPage() {
 
   useEffect(() => {
     const loadTypes = async () => {
-      const res = await apiClient.get('/api/v1/admin/leave-types')
+      const res = await apiClient.get('/v1/admin/leave-types')
       setLeaveTypes(res.data || [])
     }
     loadTypes()
@@ -18,7 +18,7 @@ function HrLeaveTypesBalancesPage() {
 
   const loadBalances = async () => {
     if (!selectedEmployeeId) return
-    const res = await apiClient.get('/api/v1/admin/leave-balances', {
+    const res = await apiClient.get('/v1/admin/leave-balances', {
       params: { employeeId: selectedEmployeeId },
     })
     setBalances(res.data || [])
@@ -28,12 +28,12 @@ function HrLeaveTypesBalancesPage() {
     e.preventDefault()
     if (editType.id || editType.leaveTypeId) {
       const id = editType.id || editType.leaveTypeId
-      await apiClient.put(`/api/v1/admin/leave-types/${id}`, editType)
+      await apiClient.put(`/v1/admin/leave-types/${id}`, editType)
     } else {
-      await apiClient.post('/api/v1/admin/leave-types', editType)
+      await apiClient.post('/v1/admin/leave-types', editType)
     }
     setEditType(null)
-    const res = await apiClient.get('/api/v1/admin/leave-types')
+    const res = await apiClient.get('/v1/admin/leave-types')
     setLeaveTypes(res.data || [])
   }
 
@@ -41,22 +41,22 @@ function HrLeaveTypesBalancesPage() {
     e.preventDefault()
     if (editBalance.id || editBalance.balanceId) {
       const id = editBalance.id || editBalance.balanceId
-      await apiClient.put(`/api/v1/admin/leave-balances/${id}`, editBalance)
+      await apiClient.put(`/v1/admin/leave-balances/${id}`, editBalance)
     } else {
-      await apiClient.post('/api/v1/admin/leave-balances', editBalance)
+      await apiClient.post('/v1/admin/leave-balances', editBalance)
     }
     setEditBalance(null)
     await loadBalances()
   }
 
   const deleteType = async (id) => {
-    await apiClient.delete(`/api/v1/admin/leave-types/${id}`)
-    const res = await apiClient.get('/api/v1/admin/leave-types')
+    await apiClient.delete(`/v1/admin/leave-types/${id}`)
+    const res = await apiClient.get('/v1/admin/leave-types')
     setLeaveTypes(res.data || [])
   }
 
   const deleteBalance = async (id) => {
-    await apiClient.delete(`/api/v1/admin/leave-balances/${id}`)
+    await apiClient.delete(`/v1/admin/leave-balances/${id}`)
     await loadBalances()
   }
 

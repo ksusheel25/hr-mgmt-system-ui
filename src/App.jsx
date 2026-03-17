@@ -1,29 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './auth/AuthContext'
+import AuthProvider from './auth/AuthProvider'
+import { useAuth } from './auth/auth-context'
 import LoginPage from './pages/auth/LoginPage'
-import SuperAdminLayout from './layouts/SuperAdminLayout'
-import HrLayout from './layouts/HrLayout'
-import EmployeeLayout from './layouts/EmployeeLayout'
-import ManagerLayout from './layouts/ManagerLayout'
-import SuperAdminCompaniesList from './pages/superadmin/SuperAdminCompaniesList'
-import SuperAdminCompanyDetail from './pages/superadmin/SuperAdminCompanyDetail'
-import HrDashboard from './pages/hr/HrDashboard'
-import HrEmployeesPage from './pages/hr/HrEmployeesPage'
-import HrShiftsPage from './pages/hr/HrShiftsPage'
-import HrWorkPolicyPage from './pages/hr/HrWorkPolicyPage'
-import HrHolidaysPage from './pages/hr/HrHolidaysPage'
-import HrLeaveTypesBalancesPage from './pages/hr/HrLeaveTypesBalancesPage'
-import HrLeaveAdminPage from './pages/hr/HrLeaveAdminPage'
-import HrBiometricPage from './pages/hr/HrBiometricPage'
-import HrNotificationsPage from './pages/hr/HrNotificationsPage'
-import HrBulkUploadPage from './pages/hr/HrBulkUploadPage'
-import EmployeeDashboard from './pages/employee/EmployeeDashboard'
-import EmployeeAttendancePage from './pages/employee/EmployeeAttendancePage'
-import EmployeeLeavesPage from './pages/employee/EmployeeLeavesPage'
-import EmployeeNotificationsPage from './pages/employee/EmployeeNotificationsPage'
-import ManagerTeamLeavesPage from './pages/manager/ManagerTeamLeavesPage'
-import ManagerNotificationsPage from './pages/manager/ManagerNotificationsPage'
-import './index.css'
+import MuiAppLayout from './layouts/MuiAppLayout'
+import DashboardPage from './pages/mui/DashboardPage'
+import EmployeesPage from './pages/mui/EmployeesPage'
+import LeavePage from './pages/mui/LeavePage'
+import ApprovalsPage from './pages/mui/ApprovalsPage'
+import RolesPage from './pages/mui/RolesPage'
+import { Roles } from './routes/roles'
 
 function ProtectedRoute({ children, allowRoles }) {
   const { isAuthenticated, role } = useAuth()
@@ -33,7 +18,7 @@ function ProtectedRoute({ children, allowRoles }) {
   }
 
   if (allowRoles && !allowRoles.includes(role)) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/app/dashboard" replace />
   }
 
   return children
@@ -47,69 +32,46 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
 
           <Route
-            path="/super-admin/*"
+            path="/app/*"
             element={
-              <ProtectedRoute allowRoles={['SUPER_ADMIN']}>
-                <SuperAdminLayout />
+              <ProtectedRoute
+                allowRoles={[Roles.SUPER_ADMIN, Roles.HR, Roles.MANAGER, Roles.EMPLOYEE]}
+              >
+                <MuiAppLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<SuperAdminCompaniesList />} />
-            <Route path="companies" element={<SuperAdminCompaniesList />} />
-            <Route path="companies/:companyId" element={<SuperAdminCompanyDetail />} />
+            <Route index element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route
+              path="employees"
+              element={
+                <ProtectedRoute allowRoles={[Roles.SUPER_ADMIN, Roles.HR]}>
+                  <EmployeesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="leave" element={<LeavePage />} />
+            <Route
+              path="approvals"
+              element={
+                <ProtectedRoute allowRoles={[Roles.SUPER_ADMIN, Roles.HR, Roles.MANAGER]}>
+                  <ApprovalsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <ProtectedRoute allowRoles={[Roles.SUPER_ADMIN]}>
+                  <RolesPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
-          <Route
-            path="/hr/*"
-            element={
-              <ProtectedRoute allowRoles={['SUPER_ADMIN', 'HR']}>
-                <HrLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<HrDashboard />} />
-            <Route path="dashboard" element={<HrDashboard />} />
-            <Route path="employees" element={<HrEmployeesPage />} />
-            <Route path="shifts" element={<HrShiftsPage />} />
-            <Route path="work-policy" element={<HrWorkPolicyPage />} />
-            <Route path="holidays" element={<HrHolidaysPage />} />
-            <Route path="leave-types-balances" element={<HrLeaveTypesBalancesPage />} />
-            <Route path="leave-requests" element={<HrLeaveAdminPage />} />
-            <Route path="biometric" element={<HrBiometricPage />} />
-            <Route path="notifications" element={<HrNotificationsPage />} />
-            <Route path="bulk-upload" element={<HrBulkUploadPage />} />
-          </Route>
-
-          <Route
-            path="/employee/*"
-            element={
-              <ProtectedRoute allowRoles={['EMPLOYEE', 'HR', 'SUPER_ADMIN']}>
-                <EmployeeLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<EmployeeDashboard />} />
-            <Route path="dashboard" element={<EmployeeDashboard />} />
-            <Route path="attendance" element={<EmployeeAttendancePage />} />
-            <Route path="leaves" element={<EmployeeLeavesPage />} />
-            <Route path="notifications" element={<EmployeeNotificationsPage />} />
-          </Route>
-
-          <Route
-            path="/manager/*"
-            element={
-              <ProtectedRoute allowRoles={['EMPLOYEE', 'HR', 'SUPER_ADMIN']}>
-                <ManagerLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<ManagerTeamLeavesPage />} />
-            <Route path="team-leaves" element={<ManagerTeamLeavesPage />} />
-            <Route path="notifications" element={<ManagerNotificationsPage />} />
-          </Route>
-
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

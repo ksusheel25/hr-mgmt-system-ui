@@ -16,7 +16,7 @@ function HrWorkPolicyPage() {
     const load = async () => {
       setLoading(true)
       try {
-        const res = await apiClient.get('/api/v1/admin/work-policy')
+        const res = await apiClient.get('/v1/admin/work-policy')
         if (res.data) setPolicy(res.data)
       } finally {
         setLoading(false)
@@ -33,7 +33,7 @@ function HrWorkPolicyPage() {
     e.preventDefault()
     setSaving(true)
     try {
-      await apiClient.put('/api/v1/admin/work-policy', policy)
+      await apiClient.put('/v1/admin/work-policy', policy)
     } finally {
       setSaving(false)
     }

@@ -14,9 +14,9 @@ function SuperAdminCompaniesList() {
     setLoading(true)
     setError(null)
     try {
-      const res = await apiClient.get('/api/v1/admin/companies')
+      const res = await apiClient.get('/v1/admin/companies')
       setCompanies(res.data || [])
-    } catch (err) {
+    } catch {
       setError('Failed to load companies.')
     } finally {
       setLoading(false)
@@ -31,10 +31,10 @@ function SuperAdminCompaniesList() {
     e.preventDefault()
     setCreating(true)
     try {
-      await apiClient.post('/api/v1/admin/companies', form)
+      await apiClient.post('/v1/admin/companies', form)
       setForm({ name: '', code: '', timezone: '' })
       await loadCompanies()
-    } catch (err) {
+    } catch {
       // surface minimal error
     } finally {
       setCreating(false)

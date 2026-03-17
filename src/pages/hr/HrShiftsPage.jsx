@@ -10,7 +10,7 @@ function HrShiftsPage() {
   const loadShifts = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/api/v1/admin/shifts')
+      const res = await apiClient.get('/v1/admin/shifts')
       setShifts(res.data || [])
     } finally {
       setLoading(false)
@@ -31,9 +31,9 @@ function HrShiftsPage() {
     try {
       if (editShift.id || editShift.shiftId) {
         const id = editShift.id || editShift.shiftId
-        await apiClient.put(`/api/v1/admin/shifts/${id}`, editShift)
+        await apiClient.put(`/v1/admin/shifts/${id}`, editShift)
       } else {
-        await apiClient.post('/api/v1/admin/shifts', editShift)
+        await apiClient.post('/v1/admin/shifts', editShift)
       }
       setEditShift(null)
       await loadShifts()
@@ -43,7 +43,7 @@ function HrShiftsPage() {
   }
 
   const handleDelete = async (shiftId) => {
-    await apiClient.delete(`/api/v1/admin/shifts/${shiftId}`)
+    await apiClient.delete(`/v1/admin/shifts/${shiftId}`)
     await loadShifts()
   }
 
