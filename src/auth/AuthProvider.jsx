@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { apiClient, setAuthToken } from '../lib/apiClient'
 import { Roles } from '../routes/roles'
+import { EmployeesApi } from '../lib/api'
 
 const STORAGE_KEY = 'hrms-auth'
 
@@ -70,7 +71,7 @@ export default function AuthProvider({ children }) {
   const login = async ({ tenantId, username, password }) => {
     setLoading(true)
     try {
-      const res = await apiClient.post('/auth/login', { tenantId, username, password })
+      const res = await apiClient.post('/api/v1/auth/login', { tenantId, username, password })
       const accessToken = res.data?.accessToken
       if (!accessToken) throw new Error('Missing accessToken')
 
@@ -85,12 +86,25 @@ export default function AuthProvider({ children }) {
         email: derived.username || username,
       })
 
+      // Ensure we have a concrete employeeId for attendance APIs.
+      // Some tokens may not include employeeId, so fetch from /employees/me.
+      let resolvedEmployeeId = derived.employeeId
+      if (!resolvedEmployeeId) {
+        try {
+          const me = await EmployeesApi.me()
+          resolvedEmployeeId = me?.employeeId || me?.id || me?.employeeCode || null
+          if (resolvedEmployeeId) setEmployeeId(resolvedEmployeeId)
+        } catch {
+          // Non-fatal; attendance actions will show a friendly error if missing.
+        }
+      }
+
       window.sessionStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
           token: accessToken,
           role: derived.role,
-          employeeId: derived.employeeId,
+          employeeId: resolvedEmployeeId,
           user: { name: derived.username || username, email: derived.username || username },
         }),
       )
@@ -123,6 +137,7 @@ export default function AuthProvider({ children }) {
       loading,
       login,
       logout,
+      setEmployeeId,
     }),
     [token, role, employeeId, user, loading],
   )

@@ -8,6 +8,7 @@ import EmployeesPage from './pages/mui/EmployeesPage'
 import LeavePage from './pages/mui/LeavePage'
 import ApprovalsPage from './pages/mui/ApprovalsPage'
 import RolesPage from './pages/mui/RolesPage'
+import AttendancePage from './pages/mui/AttendancePage'
 import { Roles } from './routes/roles'
 
 function ProtectedRoute({ children, allowRoles }) {
@@ -43,6 +44,7 @@ function App() {
           >
             <Route index element={<Navigate to="/app/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
             <Route
               path="employees"
               element={

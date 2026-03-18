@@ -15,7 +15,7 @@ function EmployeeDashboard() {
       })
       setToday(resAttendance.data?.[0] || null)
 
-      const resLeaves = await apiClient.get('/leave/my')
+      const resLeaves = await apiClient.get('/api/v1/leave/my')
       const upcoming =
         (resLeaves.data || []).find(
           (lr) => lr.status === 'APPROVED' && new Date(lr.fromDate) >= new Date(),

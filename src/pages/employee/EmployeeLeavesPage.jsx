@@ -15,7 +15,7 @@ function EmployeeLeavesPage() {
   const load = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/leave/my')
+      const res = await apiClient.get('/api/v1/leave/my')
       setLeaves(res.data || [])
     } finally {
       setLoading(false)
@@ -30,7 +30,7 @@ function EmployeeLeavesPage() {
     e.preventDefault()
     setCreating(true)
     try {
-      await apiClient.post('/leave/apply', newLeave)
+      await apiClient.post('/api/v1/leave/apply', newLeave)
       setNewLeave({
         leaveType: '',
         fromDate: '',

@@ -8,7 +8,7 @@ function HrNotificationsPage() {
   const load = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/notifications/my')
+      const res = await apiClient.get('/api/v1/notifications/my')
       setNotifications(res.data || [])
     } finally {
       setLoading(false)
@@ -20,7 +20,7 @@ function HrNotificationsPage() {
   }, [])
 
   const markRead = async (id) => {
-    await apiClient.put(`/notifications/${id}/read`)
+    await apiClient.put(`/api/v1/notifications/${id}/read`)
     await load()
   }
 

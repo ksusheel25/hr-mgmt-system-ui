@@ -8,7 +8,7 @@ function ManagerTeamLeavesPage() {
   const load = async () => {
     setLoading(true)
     try {
-      const res = await apiClient.get('/leave/pending')
+      const res = await apiClient.get('/api/v1/leave/pending')
       setPending(res.data || [])
     } finally {
       setLoading(false)
@@ -21,7 +21,7 @@ function ManagerTeamLeavesPage() {
 
   const act = async (id, action) => {
     const path =
-      action === 'approve' ? `/leave/${id}/approve` : `/leave/${id}/reject`
+      action === 'approve' ? `/api/v1/leave/${id}/approve` : `/api/v1/leave/${id}/reject`
     await apiClient.post(path, { remarks: '' })
     await load()
   }

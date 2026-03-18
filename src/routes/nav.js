@@ -8,9 +8,21 @@ export const navItems = [
     roles: [Roles.SUPER_ADMIN, Roles.HR, Roles.MANAGER, Roles.EMPLOYEE],
   },
   {
+    key: 'attendance',
+    label: 'Attendance',
+    to: '/app/attendance',
+    roles: [Roles.SUPER_ADMIN, Roles.HR, Roles.MANAGER, Roles.EMPLOYEE],
+  },
+  {
     key: 'employees',
     label: 'Employees',
     to: '/app/employees',
+    roles: [Roles.SUPER_ADMIN, Roles.HR],
+  },
+  {
+    key: 'holidays',
+    label: 'Holidays',
+    to: '/app/holidays',
     roles: [Roles.SUPER_ADMIN, Roles.HR],
   },
   {
