@@ -33,6 +33,13 @@ function decodeJwt(token) {
   }
 }
 
+function isUuid(value) {
+  if (!value) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value).trim(),
+  )
+}
+
 function deriveRoleAndEmployeeId(token) {
   const payload = decodeJwt(token)
   if (!payload) return { role: null, employeeId: null, username: null }
@@ -53,7 +60,9 @@ function deriveRoleAndEmployeeId(token) {
   else if (normalized.has(Roles.HR)) role = Roles.HR
   else if (normalized.has(Roles.MANAGER)) role = Roles.MANAGER
 
-  const employeeId = payload.employeeId || payload.empId || payload.sub || null
+  const rawEmployeeId = payload.employeeId || payload.empId || payload.sub || null
+  // IMPORTANT: backend attendance APIs require UUID `id`, not employeeCode (e.g. EMP001).
+  const employeeId = isUuid(rawEmployeeId) ? rawEmployeeId : null
   const username = payload.username || payload.preferred_username || payload.email || null
   return { role, employeeId, username }
 }
@@ -80,7 +89,6 @@ export default function AuthProvider({ children }) {
 
       const derived = deriveRoleAndEmployeeId(accessToken)
       setRole(derived.role)
-      setEmployeeId(derived.employeeId)
       setUser({
         name: derived.username || username,
         email: derived.username || username,
@@ -92,11 +100,14 @@ export default function AuthProvider({ children }) {
       if (!resolvedEmployeeId) {
         try {
           const me = await EmployeesApi.me()
-          resolvedEmployeeId = me?.employeeId || me?.id || me?.employeeCode || null
+          // Backend expects UUID `id` as employeeId for attendance actions.
+          resolvedEmployeeId = me?.id || me?.employeeId || null
           if (resolvedEmployeeId) setEmployeeId(resolvedEmployeeId)
         } catch {
           // Non-fatal; attendance actions will show a friendly error if missing.
         }
+      } else {
+        setEmployeeId(resolvedEmployeeId)
       }
 
       window.sessionStorage.setItem(

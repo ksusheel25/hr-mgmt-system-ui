@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Chip,
+  LinearProgress,
   Paper,
   Stack,
   Typography,
@@ -66,10 +67,88 @@ function isWeekend(iso) {
   return day === 0 ? 'sun' : day === 6 ? 'sat' : null
 }
 
-function Timeline({ checkIn, checkOut, inProgress }) {
+const WORKDAY_START_MIN = 9 * 60 // 09:00
+const WORKDAY_END_MIN = 18 * 60 // 18:00
+
+function parseTimeToMinutes(t) {
+  if (!t || t === '—') return null
+  const s = String(t).trim()
+  // supports "HH:mm", "HH:mm:ss", and ISO-ish times
+  const m = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/)
+  if (!m) return null
+  const hh = Number(m[1])
+  const mm = Number(m[2])
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null
+  return Math.max(0, Math.min(24 * 60, hh * 60 + mm))
+}
+
+function clamp01(n) {
+  return Math.max(0, Math.min(1, n))
+}
+
+function isUuid(value) {
+  if (!value) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value).trim(),
+  )
+}
+
+function workdayProgressValue({ date, checkIn, checkOut, inProgress, nowMs, todayStr }) {
+  const inMin = parseTimeToMinutes(checkIn)
+  if (inMin == null) return null
+
+  let endMin = null
+  const outMin = parseTimeToMinutes(checkOut)
+  if (outMin != null) endMin = outMin
+  else if (inProgress && date === todayStr) {
+    const d = new Date(nowMs)
+    endMin = d.getHours() * 60 + d.getMinutes()
+  } else {
+    endMin = inMin
+  }
+
+  const denom = WORKDAY_END_MIN - WORKDAY_START_MIN
+  if (denom <= 0) return 0
+
+  // "From where checked-in" progress within the 9–6 window.
+  const frac = clamp01((endMin - inMin) / denom)
+  return Math.round(frac * 100)
+}
+
+function normalizeIsoDate(value) {
+  if (!value) return null
+  const s = String(value)
+  // common backend formats: "YYYY-MM-DD", "YYYY-MM-DDT00:00:00", "YYYY-MM-DDTHH:mm:ssZ"
+  const m = s.match(/^\d{4}-\d{2}-\d{2}/)
+  return m ? m[0] : null
+}
+
+function normalizeAttendanceRow(r) {
+  if (!r || typeof r !== 'object') return null
+  const date =
+    normalizeIsoDate(r.date) ||
+    normalizeIsoDate(r.attendanceDate) ||
+    normalizeIsoDate(r.day) ||
+    normalizeIsoDate(r.createdAt) ||
+    null
+  return {
+    ...r,
+    date: date || r.date, // keep original if we couldn't parse, but prefer YYYY-MM-DD
+  }
+}
+
+function Timeline({ checkIn, checkOut, inProgress, tone = 'neutral' }) {
   const hasIn = checkIn && checkIn !== '—'
   const hasOut = checkOut && checkOut !== '—'
   const active = inProgress || (hasIn && hasOut)
+  const palette =
+    tone === 'success'
+      ? { main: 'success.main', soft: 'rgba(34,197,94,.22)', dot: 'success.main' }
+      : tone === 'warning'
+        ? { main: 'warning.main', soft: 'rgba(245,158,11,.22)', dot: 'warning.main' }
+        : tone === 'info'
+          ? { main: 'info.main', soft: 'rgba(234,179,8,.20)', dot: 'info.main' }
+          : { main: 'grey.500', soft: 'rgba(148,163,184,.35)', dot: 'grey.400' }
 
   return (
     <Box sx={{ mt: 1.25 }}>
@@ -109,7 +188,20 @@ function Timeline({ checkIn, checkOut, inProgress }) {
               right: 0,
               height: 5,
               borderRadius: 999,
-              bgcolor: active ? 'rgba(34,197,94,.22)' : 'rgba(148,163,184,.35)',
+              // Even if not "active" (no punch), color the track by status.
+              bgcolor: tone === 'neutral' ? 'rgba(148,163,184,.35)' : palette.soft,
+            }}
+          />
+          {/* Status line (reach till end) */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              height: 5,
+              borderRadius: 999,
+              bgcolor: tone === 'neutral' ? 'rgba(148,163,184,.35)' : palette.main,
+              opacity: active ? 0.55 : 0.32,
             }}
           />
           <Box
@@ -119,7 +211,8 @@ function Timeline({ checkIn, checkOut, inProgress }) {
               width: 10,
               height: 10,
               borderRadius: 999,
-              bgcolor: active ? 'success.main' : 'grey.400',
+              bgcolor: tone === 'neutral' ? 'grey.400' : palette.dot,
+              opacity: active ? 1 : 0.55,
             }}
           />
           <Box
@@ -129,10 +222,16 @@ function Timeline({ checkIn, checkOut, inProgress }) {
               width: 10,
               height: 10,
               borderRadius: 999,
-              bgcolor: hasOut ? 'success.main' : inProgress ? 'success.main' : 'grey.400',
+              bgcolor: tone === 'neutral' ? 'grey.400' : palette.dot,
+              opacity: hasOut || inProgress ? 1 : 0.55,
               ...(inProgress && !hasOut
                 ? {
-                    boxShadow: '0 0 0 6px rgba(34,197,94,.18)',
+                    boxShadow:
+                      tone === 'warning'
+                        ? '0 0 0 6px rgba(245,158,11,.18)'
+                        : tone === 'info'
+                          ? '0 0 0 6px rgba(234,179,8,.16)'
+                          : '0 0 0 6px rgba(34,197,94,.18)',
                     animation: 'pulseDot 1.6s ease-out infinite',
                     '@keyframes pulseDot': {
                       '0%': { transform: 'scale(0.9)', opacity: 0.95 },
@@ -171,7 +270,8 @@ export default function AttendancePage() {
     setError(null)
     try {
       const data = await AttendanceApi.me({ from, to })
-      setRows(Array.isArray(data) ? data : [])
+      const list = Array.isArray(data) ? data : []
+      setRows(list.map(normalizeAttendanceRow).filter(Boolean))
     } catch {
       setError('Could not load attendance.')
     } finally {
@@ -186,10 +286,10 @@ export default function AttendancePage() {
   // If employeeId isn't present in token/session, fetch it from /employees/me.
   useEffect(() => {
     const ensureEmployeeId = async () => {
-      if (employeeId) return
+      if (employeeId && isUuid(employeeId)) return
       try {
         const me = await EmployeesApi.me()
-        const id = me?.employeeId || me?.id || me?.employeeCode || null
+        const id = me?.id || me?.employeeId || null
         if (id) setEmployeeId?.(id)
       } catch {
         // ignore; attendance punch will show a friendly error
@@ -205,16 +305,15 @@ export default function AttendancePage() {
   }, [])
 
   const todayStr = useMemo(() => isoDate(new Date()), [])
-  const today = useMemo(() => (rows || []).find((r) => r.date === todayStr) || null, [rows, todayStr])
-
-  const isCheckedIn = Boolean(
-    today &&
-      (String(today.status || '').toUpperCase().includes('IN') ||
-        String(today.status || '').toUpperCase().includes('PRESENT')) &&
-      (today.checkOutTime == null && today.checkoutTime == null && today.checkOut == null),
+  const today = useMemo(
+    () => (rows || []).find((r) => normalizeIsoDate(r.date) === todayStr) || null,
+    [rows, todayStr],
   )
 
   const checkedInAt = today?.checkInTime || today?.checkinTime || today?.checkIn || null
+  const checkedOutAt = today?.checkOutTime || today?.checkoutTime || today?.checkOut || null
+
+  const isCheckedIn = Boolean(checkedInAt && !checkedOutAt)
 
   const runningWorked = useMemo(() => {
     if (!isCheckedIn || !checkedInAt) return null
@@ -224,15 +323,25 @@ export default function AttendancePage() {
   }, [isCheckedIn, checkedInAt, now, todayStr])
 
   const punch = async (type) => {
-    if (!employeeId) {
+    let id = employeeId
+    if (!id || !isUuid(id)) {
+      try {
+        const me = await EmployeesApi.me()
+        id = me?.id || me?.employeeId || null
+        if (id) setEmployeeId?.(id)
+      } catch {
+        // ignore; handled below
+      }
+    }
+    if (!id || !isUuid(id)) {
       setError('Employee profile not loaded yet. Please refresh in a moment.')
       return
     }
     setPunching(true)
     setError(null)
     try {
-      if (type === 'in') await AttendanceApi.checkIn({ employeeId })
-      else await AttendanceApi.checkOut({ employeeId })
+      if (type === 'in') await AttendanceApi.checkIn({ employeeId: id })
+      else await AttendanceApi.checkOut({ employeeId: id })
       await load()
     } catch {
       setError('Action failed. Please try again.')
@@ -353,6 +462,7 @@ export default function AttendancePage() {
 
             const isToday = date === todayStr
             const weekend = isWeekend(date) // 'sat' | 'sun' | null
+            const isFuture = date > todayStr
             const isPresent =
               status.toUpperCase().includes('PRESENT') || status.toUpperCase().includes('IN')
             const chipColor = isPresent
@@ -361,6 +471,7 @@ export default function AttendancePage() {
                 ? 'warning'
                 : 'default'
             const inProgress = isToday && isCheckedIn
+            const tone = isFuture ? 'info' : isPresent || inProgress ? 'success' : status === 'Absent' ? 'warning' : 'neutral'
 
             return (
               <Paper
@@ -390,7 +501,7 @@ export default function AttendancePage() {
                   alignItems={{ sm: 'center' }}
                   justifyContent="space-between"
                 >
-                  <Stack spacing={0.5}>
+                  <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0, width: '100%' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
                         {weekDayLabel(date)}
@@ -443,7 +554,34 @@ export default function AttendancePage() {
                       </Typography>
                     </Stack>
 
-                    <Timeline checkIn={checkIn} checkOut={checkOut} inProgress={inProgress} />
+                    {(() => {
+                      // For "today checked-in", show the exact indeterminate success progress
+                      // the user expects (keeps moving).
+                      if (inProgress) {
+                        return (
+                          <Box sx={{ mt: 1, width: '100%' }}>
+                            <LinearProgress color={tone === 'warning' ? 'warning' : tone === 'info' ? 'info' : 'success'} />
+                          </Box>
+                        )
+                      }
+
+                      const value = workdayProgressValue({ date, checkIn, checkOut, inProgress, nowMs: now, todayStr })
+                      if (value == null) return null
+                      return (
+                        <Box sx={{ mt: 1, width: '100%' }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={value}
+                            color={tone === 'warning' ? 'warning' : tone === 'info' ? 'info' : 'success'}
+                            sx={{ height: 7, borderRadius: 999 }}
+                          />
+                        </Box>
+                      )
+                    })()}
+
+                    <Box sx={{ width: '100%' }}>
+                      <Timeline checkIn={checkIn} checkOut={checkOut} inProgress={inProgress} tone={tone} />
+                    </Box>
                   </Stack>
                 </Stack>
               </Paper>

@@ -3,10 +3,24 @@ import { apiClient } from './apiClient'
 function asList(payload) {
   if (Array.isArray(payload)) return payload
   if (!payload || typeof payload !== 'object') return []
-  // Common wrappers: { data: [] }, { items: [] }, { content: [] }, { results: [] }
-  for (const key of ['data', 'items', 'content', 'results']) {
+  // Common wrappers: { data: [] }, { items: [] }, { content: [] }, { results: [] }, etc.
+  for (const key of [
+    'data',
+    'items',
+    'content',
+    'results',
+    'result',
+    'records',
+    'rows',
+    'list',
+    'balances',
+    'leaveBalances',
+  ]) {
     if (Array.isArray(payload[key])) return payload[key]
   }
+  // Some endpoints return a single object for a "me" query; treat it as a list-of-one.
+  // (Used only by list-style API wrappers below.)
+  if (payload.id || payload.date || payload.employeeId) return [payload]
   return []
 }
 
@@ -83,6 +97,30 @@ export const LeaveApi = {
   },
 }
 
+export const LeaveBalancesApi = {
+  me: async () => {
+    const res = await apiClient.get('/api/v1/leave-balances/me')
+    return asList(res.data)
+  },
+  listByEmployee: async ({ employeeId }) => {
+    const res = await apiClient.get('/api/v1/admin/leave-balances', { params: { employeeId } })
+    return asList(res.data)
+  },
+}
+
+export const LeaveTypesApi = {
+  list: async () => {
+    // Prefer employee-accessible endpoint if available; fallback to admin route.
+    try {
+      const res = await apiClient.get('/api/v1/leave-types')
+      return asList(res.data)
+    } catch {
+      const res = await apiClient.get('/api/v1/admin/leave-types')
+      return asList(res.data)
+    }
+  },
+}
+
 export const AttendanceApi = {
   me: async ({ from, to }) => {
     const res = await apiClient.get('/api/v1/attendance/me', { params: { from, to } })
@@ -100,6 +138,11 @@ export const AttendanceApi = {
 
 export const HolidaysApi = {
   list: async ({ from, to }) => {
+    // Employee-accessible endpoint
+    const res = await apiClient.get('/api/v1/holidays', { params: { from, to } })
+    return asList(res.data)
+  },
+  adminList: async ({ from, to }) => {
     const res = await apiClient.get('/api/v1/admin/holidays', { params: { from, to } })
     return asList(res.data)
   },
