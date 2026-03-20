@@ -1,4 +1,89 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PageHeader from '../components/common/PageHeader';
+
+const getStatusBadge = (status) => {
+  if (status === 'Active') return 'badge-green';
+  if (status === 'On Leave') return 'badge-amber';
+  return 'badge-gray';
+};
+
+const EmployeesToolbar = () => {
+  return (
+    <div className="toolbar">
+      <input className="input-box" style={{ flex: 1, maxWidth: '240px' }} placeholder="Search employees..." />
+      <select className="select-box">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Marketing</option>
+      </select>
+      <select className="select-box">
+        <option>All Status</option>
+        <option>Active</option>
+        <option>On Leave</option>
+      </select>
+    </div>
+  );
+};
+
+const EmployeesTable = ({ employees, onEditClick }) => {
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Join Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {employees.map((emp) => (
+            <tr key={emp.id}>
+              <td>
+                <div className="emp-row">
+                  <div className="emp-avatar" style={{ background: emp.color }}>{emp.avatar}</div>
+                  <div>
+                    <div className="emp-name">{emp.name}</div>
+                    <div className="emp-dept">{emp.emp_id}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{emp.dept}</td>
+              <td>{emp.designation}</td>
+              <td>{emp.joinDate}</td>
+              <td>
+                <span className={`badge ${getStatusBadge(emp.status)}`}>{emp.status}</span>
+              </td>
+              <td>
+                <button className="action-btn" onClick={() => onEditClick?.(emp)}>✏️</button>
+                <button className="action-btn">🗑️</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const EmployeesPagination = () => {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', fontSize: '13px', color: 'var(--text-sec)' }}>
+      <span>Showing 1–5 of 248</span>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button className="btn btn-outline btn-sm">← Prev</button>
+        <button className="btn btn-primary btn-sm">1</button>
+        <button className="btn btn-outline btn-sm">2</button>
+        <button className="btn btn-outline btn-sm">3</button>
+        <button className="btn btn-outline btn-sm">Next →</button>
+      </div>
+    </div>
+  );
+};
 
 const EmployeesPage = ({ onAddClick, onEditClick }) => {
   const [employees] = useState([
@@ -9,89 +94,18 @@ const EmployeesPage = ({ onAddClick, onEditClick }) => {
     { id: 5, name: 'Vikram Joshi', emp_id: 'EMP-005', avatar: 'VJ', color: '#D97706', dept: 'Engineering', designation: 'Product Manager', joinDate: 'Feb 2020', status: 'Active' },
   ]);
 
-  const getStatusBadge = (status) => {
-    if (status === 'Active') return 'badge-green';
-    if (status === 'On Leave') return 'badge-amber';
-    return 'badge-gray';
-  };
-
   return (
     <div style={{ paddingBottom: '20px' }}>
-      <div className="page-header">
-        <div>
-          <div className="page-title">Employee Management</div>
-          <div className="page-sub">248 employees across all departments</div>
-        </div>
-        <button className="btn btn-primary" onClick={onAddClick}>
-          + Add Employee
-        </button>
-      </div>
+      <PageHeader
+        title="Employee Management"
+        subtitle="248 employees across all departments"
+        actionLabel="+ Add Employee"
+        onAction={onAddClick}
+      />
 
-      <div className="toolbar">
-        <input className="input-box" style={{ flex: 1, maxWidth: '240px' }} placeholder="Search employees..." />
-        <select className="select-box">
-          <option>All Departments</option>
-          <option>Engineering</option>
-          <option>Sales</option>
-          <option>Marketing</option>
-        </select>
-        <select className="select-box">
-          <option>All Status</option>
-          <option>Active</option>
-          <option>On Leave</option>
-        </select>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Department</th>
-              <th>Designation</th>
-              <th>Join Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((emp) => (
-              <tr key={emp.id}>
-                <td>
-                  <div className="emp-row">
-                    <div className="emp-avatar" style={{ background: emp.color }}>{emp.avatar}</div>
-                    <div>
-                      <div className="emp-name">{emp.name}</div>
-                      <div className="emp-dept">{emp.emp_id}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>{emp.dept}</td>
-                <td>{emp.designation}</td>
-                <td>{emp.joinDate}</td>
-                <td>
-                  <span className={`badge ${getStatusBadge(emp.status)}`}>{emp.status}</span>
-                </td>
-                <td>
-                  <button className="action-btn" onClick={() => onEditClick(emp)}>✏️</button>
-                  <button className="action-btn">🗑️</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', fontSize: '13px', color: 'var(--text-sec)' }}>
-        <span>Showing 1–5 of 248</span>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button className="btn btn-outline btn-sm">← Prev</button>
-          <button className="btn btn-primary btn-sm">1</button>
-          <button className="btn btn-outline btn-sm">2</button>
-          <button className="btn btn-outline btn-sm">3</button>
-          <button className="btn btn-outline btn-sm">Next →</button>
-        </div>
-      </div>
+      <EmployeesToolbar />
+      <EmployeesTable employees={employees} onEditClick={onEditClick} />
+      <EmployeesPagination />
     </div>
   );
 };

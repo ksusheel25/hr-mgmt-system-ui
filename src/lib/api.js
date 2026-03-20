@@ -36,7 +36,9 @@ const handleResponse = async (response) => {
   if (!response.ok) {
     if (response.status === 401) {
       clearAuthToken();
-      window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+      }
     }
     throw new Error(`HTTP Error: ${response.status}`);
   }
@@ -52,8 +54,15 @@ export const authAPI = {
       body: JSON.stringify({ tenantId, username, password }),
     });
     const data = await handleResponse(response);
-    if (data.token) {
-      setAuthToken(data.token, tenantId);
+    const token =
+      data?.token ??
+      data?.accessToken ??
+      data?.jwt ??
+      data?.authToken;
+    if (token) {
+      setAuthToken(token, tenantId);
+    } else {
+      console.warn('Login response did not include a token field.');
     }
     return data;
   },
