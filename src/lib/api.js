@@ -1,150 +1,510 @@
-import { apiClient } from './apiClient'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
-function asList(payload) {
-  if (Array.isArray(payload)) return payload
-  if (!payload || typeof payload !== 'object') return []
-  // Common wrappers: { data: [] }, { items: [] }, { content: [] }, { results: [] }, etc.
-  for (const key of [
-    'data',
-    'items',
-    'content',
-    'results',
-    'result',
-    'records',
-    'rows',
-    'list',
-    'balances',
-    'leaveBalances',
-  ]) {
-    if (Array.isArray(payload[key])) return payload[key]
+let authToken = localStorage.getItem('authToken');
+let tenantId = localStorage.getItem('tenantId');
+
+const setAuthToken = (token, tenant) => {
+  authToken = token;
+  tenantId = tenant;
+  if (token) {
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('tenantId', tenant);
   }
-  // Some endpoints return a single object for a "me" query; treat it as a list-of-one.
-  // (Used only by list-style API wrappers below.)
-  if (payload.id || payload.date || payload.employeeId) return [payload]
-  return []
-}
+};
 
-export const AuthApi = {
-  login: async ({ tenantId, username, password }) => {
-    const res = await apiClient.post('/api/v1/auth/login', { tenantId, username, password })
-    return res.data
-  },
-}
+const clearAuthToken = () => {
+  authToken = null;
+  tenantId = null;
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('tenantId');
+};
 
-export const EmployeesApi = {
-  me: async () => {
-    const res = await apiClient.get('/api/v1/employees/me')
-    return res.data
-  },
-  list: async () => {
-    const res = await apiClient.get('/api/v1/admin/employees')
-    return asList(res.data)
-  },
-  create: async (payload) => {
-    const res = await apiClient.post('/api/v1/admin/employees', payload)
-    return res.data
-  },
-  update: async (id, payload) => {
-    const res = await apiClient.put(`/api/v1/admin/employees/${id}`, payload)
-    return res.data
-  },
-  deactivate: async (id) => {
-    const res = await apiClient.patch(`/api/v1/admin/employees/${id}/deactivate`)
-    return res.data
-  },
-}
+const getHeaders = (isFormData = false) => {
+  const headers = {
+    'X-Tenant-ID': tenantId,
+  };
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
+};
 
-export const LeaveApi = {
-  apply: async (payload) => {
-    const res = await apiClient.post('/api/v1/leave/apply', payload)
-    return res.data
-  },
-  my: async () => {
-    const res = await apiClient.get('/api/v1/leave/my')
-    return asList(res.data)
-  },
-  pending: async () => {
-    const res = await apiClient.get('/api/v1/leave/pending')
-    return asList(res.data)
-  },
-  approve: async (leaveRequestId, remarks = '') => {
-    const res = await apiClient.post(`/api/v1/leave/${leaveRequestId}/approve`, { remarks })
-    return res.data
-  },
-  reject: async (leaveRequestId, remarks = '') => {
-    const res = await apiClient.post(`/api/v1/leave/${leaveRequestId}/reject`, { remarks })
-    return res.data
-  },
-  adminList: async () => {
-    const res = await apiClient.get('/api/v1/admin/leaves')
-    return asList(res.data)
-  },
-  adminCreate: async (payload) => {
-    const res = await apiClient.post('/api/v1/admin/leaves', payload)
-    return res.data
-  },
-  adminApprove: async (leaveRequestId) => {
-    const res = await apiClient.patch(`/api/v1/admin/leaves/${leaveRequestId}/approve`)
-    return res.data
-  },
-  adminReject: async (leaveRequestId) => {
-    const res = await apiClient.patch(`/api/v1/admin/leaves/${leaveRequestId}/reject`)
-    return res.data
-  },
-  adminCancel: async (leaveRequestId) => {
-    const res = await apiClient.patch(`/api/v1/admin/leaves/${leaveRequestId}/cancel`)
-    return res.data
-  },
-}
-
-export const LeaveBalancesApi = {
-  me: async () => {
-    const res = await apiClient.get('/api/v1/leave-balances/me')
-    return asList(res.data)
-  },
-  listByEmployee: async ({ employeeId }) => {
-    const res = await apiClient.get('/api/v1/admin/leave-balances', { params: { employeeId } })
-    return asList(res.data)
-  },
-}
-
-export const LeaveTypesApi = {
-  list: async () => {
-    // Prefer employee-accessible endpoint if available; fallback to admin route.
-    try {
-      const res = await apiClient.get('/api/v1/leave-types')
-      return asList(res.data)
-    } catch {
-      const res = await apiClient.get('/api/v1/admin/leave-types')
-      return asList(res.data)
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearAuthToken();
+      window.location.href = '/login';
     }
-  },
-}
+    throw new Error(`HTTP Error: ${response.status}`);
+  }
+  return response.json();
+};
 
-export const AttendanceApi = {
-  me: async ({ from, to }) => {
-    const res = await apiClient.get('/api/v1/attendance/me', { params: { from, to } })
-    return asList(res.data)
+// AUTH APIs
+export const authAPI = {
+  login: async (tenantId, username, password) => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId, username, password }),
+    });
+    const data = await handleResponse(response);
+    if (data.token) {
+      setAuthToken(data.token, tenantId);
+    }
+    return data;
   },
-  checkIn: async ({ employeeId }) => {
-    const res = await apiClient.post('/api/v1/attendance/check-in', { employeeId })
-    return res.data
-  },
-  checkOut: async ({ employeeId }) => {
-    const res = await apiClient.post('/api/v1/attendance/check-out', { employeeId })
-    return res.data
-  },
-}
+};
 
-export const HolidaysApi = {
-  list: async ({ from, to }) => {
-    // Employee-accessible endpoint
-    const res = await apiClient.get('/api/v1/holidays', { params: { from, to } })
-    return asList(res.data)
+// COMPANY APIs
+export const companyAPI = {
+  create: async (companyData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/companies`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(companyData),
+    });
+    return handleResponse(response);
   },
-  adminList: async ({ from, to }) => {
-    const res = await apiClient.get('/api/v1/admin/holidays', { params: { from, to } })
-    return asList(res.data)
-  },
-}
 
+  getById: async (companyId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/companies/${companyId}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (companyId, companyData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/companies/${companyId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(companyData),
+    });
+    return handleResponse(response);
+  },
+};
+
+// EMPLOYEE APIs
+export const employeeAPI = {
+  create: async (employeeData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/employees`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(employeeData),
+    });
+    return handleResponse(response);
+  },
+
+  getMe: async () => {
+    const response = await fetch(`${API_BASE_URL}/employees/me`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  list: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/admin/employees?${params}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (employeeId, employeeData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/employees/${employeeId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(employeeData),
+    });
+    return handleResponse(response);
+  },
+
+  deactivate: async (employeeId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/employees/${employeeId}/deactivate`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  adjustWfhBalance: async (employeeId, delta) => {
+    const response = await fetch(`${API_BASE_URL}/admin/employees/${employeeId}/wfh-balance`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ delta }),
+    });
+    return handleResponse(response);
+  },
+};
+
+// SHIFT APIs
+export const shiftAPI = {
+  create: async (shiftData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/shifts`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(shiftData),
+    });
+    return handleResponse(response);
+  },
+
+  list: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/shifts`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (shiftId, shiftData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/shifts/${shiftId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(shiftData),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (shiftId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/shifts/${shiftId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// WORK POLICY APIs
+export const workPolicyAPI = {
+  getAdmin: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/work-policy`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  updateAdmin: async (policyData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/work-policy`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(policyData),
+    });
+    return handleResponse(response);
+  },
+
+  getSelf: async () => {
+    const response = await fetch(`${API_BASE_URL}/work-policy`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ATTENDANCE APIs
+export const attendanceAPI = {
+  checkIn: async (employeeId) => {
+    const response = await fetch(`${API_BASE_URL}/attendance/check-in`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ employeeId }),
+    });
+    return handleResponse(response);
+  },
+
+  checkOut: async (employeeId) => {
+    const response = await fetch(`${API_BASE_URL}/attendance/check-out`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ employeeId }),
+    });
+    return handleResponse(response);
+  },
+
+  getMe: async (fromDate, toDate) => {
+    const params = new URLSearchParams({ from: fromDate, to: toDate });
+    const response = await fetch(`${API_BASE_URL}/attendance/me?${params}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// BIOMETRIC APIs
+export const biometricAPI = {
+  receiveEvent: async (eventData) => {
+    const response = await fetch(`${API_BASE_URL}/biometric/events`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(eventData),
+    });
+    return handleResponse(response);
+  },
+
+  receivePunch: async (punchData) => {
+    const response = await fetch(`${API_BASE_URL}/biometric/punch`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(punchData),
+    });
+    return handleResponse(response);
+  },
+};
+
+// HOLIDAY APIs
+export const holidayAPI = {
+  create: async (holidayData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/holidays`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(holidayData),
+    });
+    return handleResponse(response);
+  },
+
+  listAdmin: async (fromDate, toDate) => {
+    const params = new URLSearchParams({ from: fromDate, to: toDate });
+    const response = await fetch(`${API_BASE_URL}/admin/holidays?${params}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (holidayId, holidayData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/holidays/${holidayId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(holidayData),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (holidayId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/holidays/${holidayId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  listSelf: async (fromDate, toDate) => {
+    const params = new URLSearchParams({ from: fromDate, to: toDate });
+    const response = await fetch(`${API_BASE_URL}/holidays?${params}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// LEAVE TYPE APIs
+export const leaveTypeAPI = {
+  create: async (leaveTypeData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-types`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(leaveTypeData),
+    });
+    return handleResponse(response);
+  },
+
+  list: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-types`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (leaveTypeId, leaveTypeData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-types/${leaveTypeId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(leaveTypeData),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (leaveTypeId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-types/${leaveTypeId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// LEAVE BALANCE APIs
+export const leaveBalanceAPI = {
+  createOrUpdate: async (balanceData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-balances`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(balanceData),
+    });
+    return handleResponse(response);
+  },
+
+  adjust: async (adjustData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-balances/adjust`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(adjustData),
+    });
+    return handleResponse(response);
+  },
+
+  list: async (employeeId) => {
+    const params = new URLSearchParams({ employeeId });
+    const response = await fetch(`${API_BASE_URL}/admin/leave-balances?${params}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (leaveBalanceId, balanceData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-balances/${leaveBalanceId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(balanceData),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (leaveBalanceId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leave-balances/${leaveBalanceId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getMe: async () => {
+    const response = await fetch(`${API_BASE_URL}/leave-balances/me`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// LEAVE WORKFLOW APIs
+export const leaveAPI = {
+  apply: async (leaveData) => {
+    const response = await fetch(`${API_BASE_URL}/leave/apply`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(leaveData),
+    });
+    return handleResponse(response);
+  },
+
+  getMy: async () => {
+    const response = await fetch(`${API_BASE_URL}/leave/my`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getPending: async () => {
+    const response = await fetch(`${API_BASE_URL}/leave/pending`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  approve: async (leaveRequestId, remarks) => {
+    const response = await fetch(`${API_BASE_URL}/leave/${leaveRequestId}/approve`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ remarks }),
+    });
+    return handleResponse(response);
+  },
+
+  reject: async (leaveRequestId, remarks) => {
+    const response = await fetch(`${API_BASE_URL}/leave/${leaveRequestId}/reject`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ remarks }),
+    });
+    return handleResponse(response);
+  },
+
+  // Admin leave APIs
+  adminCreate: async (leaveData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leaves`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(leaveData),
+    });
+    return handleResponse(response);
+  },
+
+  adminList: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/leaves`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  adminApprove: async (leaveRequestId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leaves/${leaveRequestId}/approve`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  adminReject: async (leaveRequestId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leaves/${leaveRequestId}/reject`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  adminCancel: async (leaveRequestId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/leaves/${leaveRequestId}/cancel`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// NOTIFICATION APIs
+export const notificationAPI = {
+  getMy: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications/my`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  markAsRead: async (notificationId) => {
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// BULK UPLOAD APIs
+export const bulkUploadAPI = {
+  uploadEmployees: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/admin/users/bulk-upload`, {
+      method: 'POST',
+      headers: {
+        'X-Tenant-ID': tenantId,
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+};
+
+export { setAuthToken, clearAuthToken, getHeaders };
