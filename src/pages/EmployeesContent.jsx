@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   Box,
   Button,
@@ -12,13 +11,37 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { useEmployees } from '../hooks/useEmployees'
+
+const getEmployeeName = (employee) => {
+  if (employee?.name) return employee.name
+  const fullName = [employee?.firstName, employee?.lastName].filter(Boolean).join(' ')
+  if (fullName) return fullName
+  return employee?.fullName || 'Unknown'
+}
+
+const getDepartment = (employee) => (
+  employee?.department?.name ||
+  employee?.departmentName ||
+  employee?.dept ||
+  '—'
+)
+
+const getDesignation = (employee) => (
+  employee?.designation ||
+  employee?.position ||
+  employee?.role ||
+  '—'
+)
+
+const getStatus = (employee) => (
+  employee?.status ||
+  employee?.employmentStatus ||
+  'Active'
+)
 
 export default function EmployeesContent() {
-  const [employees] = useState([
-    { id: 1, name: 'John Doe', department: 'Engineering', position: 'Developer', status: 'Active' },
-    { id: 2, name: 'Jane Smith', department: 'HR', position: 'Manager', status: 'Active' },
-    { id: 3, name: 'Bob Johnson', department: 'Sales', position: 'Executive', status: 'Active' },
-  ])
+  const { employees, loading, error } = useEmployees({ limit: 8 })
 
   return (
     <Card>
@@ -40,12 +63,27 @@ export default function EmployeesContent() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {employees.map((emp) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">Loading employees...</TableCell>
+                </TableRow>
+              )}
+              {!loading && error && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ color: 'error.main' }}>{error}</TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && employees.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">No employees found.</TableCell>
+                </TableRow>
+              )}
+              {!loading && !error && employees.map((emp) => (
                 <TableRow key={emp.id}>
-                  <TableCell>{emp.name}</TableCell>
-                  <TableCell>{emp.department}</TableCell>
-                  <TableCell>{emp.position}</TableCell>
-                  <TableCell>{emp.status}</TableCell>
+                  <TableCell>{getEmployeeName(emp)}</TableCell>
+                  <TableCell>{getDepartment(emp)}</TableCell>
+                  <TableCell>{getDesignation(emp)}</TableCell>
+                  <TableCell>{getStatus(emp)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

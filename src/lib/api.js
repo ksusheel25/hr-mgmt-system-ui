@@ -147,6 +147,13 @@ export const employeeAPI = {
     });
     return handleResponse(response);
   },
+
+  getWfhBalance: async (employeeId) => {
+    const response = await fetch(`${API_BASE_URL}/admin/employees/${employeeId}/wfh-balance`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
 
 // SHIFT APIs
